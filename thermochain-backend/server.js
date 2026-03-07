@@ -284,23 +284,12 @@ app.post('/api/smtp/test', async (req, res) => {
 // ================================================================
 // INICIO
 // ================================================================
-// Arrancar servidor siempre
+
+// ================================================================
+// INICIO — Servidor arranca siempre, BD conecta después
+// ================================================================
 app.listen(PORT, () => {
-  console.log(`ThermoChain API corriendo en puerto ${PORT}`);
+  console.log(`✅ ThermoChain Solutions API corriendo en puerto ${PORT}`);
 });
 
-// Conectar BD después de arrancar
 testDB();
-
-if (false) {
-  app.listen(PORT, () => {
-    console.log(`
-╔══════════════════════════════════════════════╗
-║  THERMOCHAIN SOLUTIONS — API Server          ║
-║  Puerto: ${PORT}                                ║
-║  Dashboard: http://localhost:${PORT}            ║
-╚══════════════════════════════════════════════╝`);
-  });
-});
-
-}
