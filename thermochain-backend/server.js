@@ -39,11 +39,12 @@ const pool = mysql.createPool({
 async function testDB() {
   try {
     const conn = await pool.getConnection();
-    console.log('✅ Conexión MariaDB establecida');
+    console.log('✅ Conexión MySQL/MariaDB establecida');
     conn.release();
   } catch (err) {
-    console.error('❌ Error conectando a MariaDB:', err.message);
-    process.exit(1);
+    console.error('❌ Error conectando a MySQL:', err.message);
+    console.log('⚠️  El servidor continúa sin BD. Reintentando en cada request...');
+    // No llamar process.exit(1) — el servidor sigue corriendo
   }
 }
 
@@ -283,7 +284,15 @@ app.post('/api/smtp/test', async (req, res) => {
 // ================================================================
 // INICIO
 // ================================================================
-testDB().then(() => {
+// Arrancar servidor siempre
+app.listen(PORT, () => {
+  console.log(`ThermoChain API corriendo en puerto ${PORT}`);
+});
+
+// Conectar BD después de arrancar
+testDB();
+
+if (false) {
   app.listen(PORT, () => {
     console.log(`
 ╔══════════════════════════════════════════════╗
@@ -293,3 +302,5 @@ testDB().then(() => {
 ╚══════════════════════════════════════════════╝`);
   });
 });
+
+}
