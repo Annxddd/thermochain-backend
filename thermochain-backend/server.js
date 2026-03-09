@@ -44,7 +44,6 @@ async function testDB() {
   } catch (err) {
     console.error('❌ Error conectando a MySQL:', err.message);
     console.log('⚠️  El servidor continúa sin BD. Reintentando en cada request...');
-    // No llamar process.exit(1) — el servidor sigue corriendo
   }
 }
 
@@ -57,7 +56,7 @@ const mailer = nodemailer.createTransport({
   secure: false,
   auth  : {
     user: 'thermochainsolutions@gmail.com',
-    pass: 'irrw pwav yesp qmcx'   // Google App Password
+    pass: 'irrw pwav yesp qmcx'
   }
 });
 
@@ -102,7 +101,7 @@ async function enviarAlertaEmail({ punto, tipo, mensaje, valor, temperatura, hum
   </div>`;
 
   await mailer.sendMail({
-    from   : `"ThermoChain Alertas" <${process.env.SMTP_USER}>`,
+    from   : '"ThermoChain Alertas" <thermochainsolutions@gmail.com>',
     to     : destinos.join(', '),
     subject: `🔴 [ThermoChain] ALERTA ${tipo} — ${punto.codigo}`,
     html
@@ -123,7 +122,6 @@ async function validarToken(req, res, next) {
     );
     if (!rows.length) return res.status(403).json({ error: 'Token inválido' });
 
-    // Actualizar última conexión
     await pool.query(
       'UPDATE dispositivos_arduino SET ultima_conexion = NOW(), ip_ultima = ? WHERE token_api = ?',
       [req.ip, token]
@@ -163,7 +161,6 @@ app.post('/api/lectura', validarToken, async (req, res) => {
 
   const conn = await pool.getConnection();
   try {
-    // Llamar al procedimiento almacenado
     const [result] = await conn.query(
       'CALL sp_insertar_lectura(?, ?, ?, ?, ?, ?, @lectura_id, @alertas); SELECT @lectura_id as lectura_id, @alertas as alertas_json',
       [punto.id, temperatura, humedad, energia_ok ?? 1, puerta_abierta ?? 0, voltaje ?? null]
@@ -172,7 +169,6 @@ app.post('/api/lectura', validarToken, async (req, res) => {
     const { lectura_id, alertas_json } = result[1][0];
     const alertas = JSON.parse(alertas_json || '[]');
 
-    // Enviar emails si hay alertas críticas
     if (alertas.includes('FALLO_ENERGIA') || alertas.some(a => a.includes('TEMP'))) {
       try {
         await enviarAlertaEmail({
@@ -183,7 +179,6 @@ app.post('/api/lectura', validarToken, async (req, res) => {
           temperatura,
           humedad
         });
-        // Marcar email como enviado
         await conn.query(
           'UPDATE alertas SET email_enviado = 1, email_destino = ? WHERE punto_id = ? AND email_enviado = 0 AND creada_en >= NOW() - INTERVAL 1 MINUTE',
           [process.env.ALERT_EMAILS, punto.id]
@@ -206,7 +201,6 @@ app.post('/api/lectura', validarToken, async (req, res) => {
 // RUTAS API — DASHBOARD (Frontend)
 // ================================================================
 
-// GET /api/dashboard — Estado actual de todos los puntos
 app.get('/api/dashboard', async (req, res) => {
   try {
     const [puntos] = await pool.query('SELECT * FROM v_ultima_lectura');
@@ -218,7 +212,6 @@ app.get('/api/dashboard', async (req, res) => {
   }
 });
 
-// GET /api/puntos/:id/lecturas — Historial de lecturas de un punto
 app.get('/api/puntos/:id/lecturas', async (req, res) => {
   const horas  = Math.min(parseInt(req.query.horas  ?? 24), 168);
   const limite = Math.min(parseInt(req.query.limite ?? 200), 1000);
@@ -236,7 +229,6 @@ app.get('/api/puntos/:id/lecturas', async (req, res) => {
   }
 });
 
-// GET /api/alertas — Alertas con filtros
 app.get('/api/alertas', async (req, res) => {
   const { resuelta = 0, limite = 100 } = req.query;
   try {
@@ -252,7 +244,6 @@ app.get('/api/alertas', async (req, res) => {
   }
 });
 
-// PATCH /api/alertas/:id/resolver
 app.patch('/api/alertas/:id/resolver', async (req, res) => {
   try {
     await pool.query(
@@ -265,12 +256,11 @@ app.patch('/api/alertas/:id/resolver', async (req, res) => {
   }
 });
 
-// POST /api/smtp/test — Probar configuración SMTP
 app.post('/api/smtp/test', async (req, res) => {
   const { email } = req.body;
   try {
     await mailer.sendMail({
-      from   : `"ThermoChain Alertas" <${process.env.SMTP_USER}>`,
+      from   : '"ThermoChain Alertas" <thermochainsolutions@gmail.com>',
       to     : email,
       subject: '✅ ThermoChain — Prueba de Conexión SMTP',
       html   : '<p>La configuración SMTP de ThermoChain Solutions está funcionando correctamente.</p>'
@@ -283,10 +273,6 @@ app.post('/api/smtp/test', async (req, res) => {
 
 // ================================================================
 // INICIO
-// ================================================================
-
-// ================================================================
-// INICIO — Servidor arranca siempre, BD conecta después
 // ================================================================
 app.listen(PORT, () => {
   console.log(`✅ ThermoChain Solutions API corriendo en puerto ${PORT}`);
